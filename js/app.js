@@ -35,11 +35,100 @@ import fetch from "isomorphic-fetch"
 
 import DOM from 'react-dom'
 import React, {Component} from 'react'
+import $ from 'jquery'
+import _ from 'underscore'
+import Firebase from 'firebase'
+import BackboneFire from 'bbfire'
 
-function app() {
-    // start app
-    // new Router()
-    DOM.render(<p>test 2</p>, document.querySelector('.container'))
-}
+var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
+var fbRef = new Firebase(rootFbURL)
 
-app()
+
+
+var SplashPage = React.createClass({
+
+
+	_handleSignUp:function(event){
+
+		console.log('event.currentTarget >>>>>>>>>>>>>>>>>', event.currentTarget)
+
+		event.preventDefault()
+
+		var emailInput = event.currentTarget.email.value
+		var passWdInput = event.currentTarget.password.value
+		var fstName = event.currentTarget.firstName.value
+		var lstName = event.currentTarget.lastName.value
+
+		console.log('inputs >>>>>>>>>', emailInput, passWdInput, fstName, lstName )
+
+		var newUser={
+			email:emailInput,
+			password: passWdInput
+		}
+		console.log('newUser >>>>>>>>>>>>>>>>', newUser)
+		
+		fbRef.createUser(newUser, function(err, authData){
+			console.log('err and authdata >>>>>>>>>>>>>>>>',err, authData)
+		})
+
+	},
+
+	_handleLogIn:function(event){
+		event.PreventDefault()
+		console.log(event)
+	},
+
+
+	render:function(){
+		return(
+			<div id='splashpage'>
+				<form onSubmit={this._handleSignUp}>
+					<h3 className='signUp'>Support Blog Lives !</h3>
+					<input type='text' id='email' placeholder='john@email.com...'/><br/>
+					<input type='password' id='password' placeholder='password...'/><br/><br/>
+					<input type='text' id='firstName' placeholder='first name...'/><br/>
+					<input type='text' id='lastName' placeholder='last name...'/><br/>
+					<input className='button-primary' type='submit' placeholder='signup'/><br/>
+				</form>
+
+				<hr/>
+				
+				<form onSubmit={this._handleLogIn}>
+					<h3 className='signin'>Log in Here</h3><br/>
+					<input type='text' id='username' placeholder='Your Email'/><br/>
+					<input type='password' id='password' placeholder='password'/><br/>
+					<input className='button-primary' type='submit' placeholder='login'/><br/>
+				</form>
+			</div>
+			)
+	}
+})
+
+
+var BlogRouter =  BackboneFire.Router.extend({
+	routes: {
+		'bloglist':'handleBlogList',
+		'createblog':'handleCreateBlog',
+		'*splash':'handleSplashPage'
+	},
+
+	handleBlogList:function(){
+			DOM.render(<Bloglist/>, document.querySelector('.container'))
+	},
+
+	handleCreateBlog:function(){
+			DOM.render(<Createblog/>, document.querySelector('.container'))
+	},
+
+	handleSplashPage:function(){
+			DOM.render(<SplashPage/>, document.querySelector('.container'))
+	},
+
+	initialize:function(){
+		var rtr = this
+		console.log('app is routing!')
+		BackboneFire.history.start()
+	}
+})
+
+var rtr = new BlogRouter()
