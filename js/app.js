@@ -43,7 +43,40 @@ import BackboneFire from 'bbfire'
 var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
 var fbRef = new Firebase(rootFbURL)
 
+var BlogList = BackboneFire.Firebase.Collection.extend({
+	url: '',
+	initialize:function(){
+		this.url = rootFbURL + 'bloglist/'
+	}
+})
 
+
+var Header = React.createClass({
+	render:function(){return(<div><h3 className='signUp'>Support Blog Lives !</h3></div>)}
+})
+var NavBar = React.createClass({
+
+	_ButtonAction:function(evt){
+		console.log(evt.currentTarget.value)
+		var butAction = evt.currentTarget.value
+		rtr.navigate(butAction, {trigger:true})
+	},
+
+	_genButtons:function(butType, ind){
+		return (
+			<button onClick={this._ButtonAction} value={butType} key={ind}>{butType}</button>
+		)
+	},
+
+	render:function(){
+		var component = this
+		return (
+		<div>
+			{['logout','createblog', 'bloglist'].map(component._genButtons)}
+		</div>
+		)
+	}
+})
 
 var SplashPage = React.createClass({
 
@@ -106,8 +139,9 @@ var SplashPage = React.createClass({
 	render:function(){
 		return(
 			<div id='splashpage'>
+			<Header/>
+
 				<form onSubmit={this._handleSignUp}>
-					<h3 className='signUp'>Support Blog Lives !</h3>
 					<input type='text' id='email' placeholder='john@email.com...'/><br/>
 					<input type='password' id='password' placeholder='password...'/><br/><br/>
 					<input type='text' id='firstName' placeholder='first name...'/><br/>
@@ -128,32 +162,90 @@ var SplashPage = React.createClass({
 	}
 })
 
-
 var Bloglist = React.createClass({
 	
+	getInitialState:function(){
+		return (
+			{ blogList:this.props.bloglist	}
+			)
+	},
 
+	// componentDidMount:function(){
+	// 	var component = this
+	// 	component.props.bloglist.on('sync', function(){
+	// 		componnent.setstate({
+	// 			bloglist:component.props.bloglist
+	// 		})
+	// 	})
+	// },
 
 	render:function(){
 
+		return (
+			<div className='blogList'>
+			<Header/>
+			<NavBar/>
+			<h2> Blog List Here</h2>
+
+			</div>
+		)
+	}
+})
+
+var Createblog = React.createClass({
+	_saveblog:function(evt){
+		evt.preventDefault()
+		// console.log('evt.currentTarget.title.value >>>>>', evt.currentTarget.title.value)
+		// console.log('evt.currentTarget.blog.value >>>>>>', evt.currentTarget.blog.value)
+ 
+		var blogObj = {
+			title:evt.currentTarget.title.value,
+			blog: evt.currentTarget.blog.value
+		}
+
+		var blogListColl = new BlogList()
+		blogListColl.create({
+			title:blogObj.title,
+			blog:blogObj.blog,
+		})
+
+
+	},
+
+
+	render:function(){
 		return(
-			<div>Create Blog Here</div>
+			<div>
+				<Header/>
+				<NavBar/>
+				<form onSubmit={this._saveblog}>
+					<input type='text' id='title' placeholder='Title...'/><br/>
+					<input type='textarea' id='blog' placeholder='blog away...'/><br/><br/>
+					<input className='button-primary' type='submit'/>
+				</form>
+			</div>
+
 			)
 	}
 
-	
 })
-
 
 
 var BlogRouter =  BackboneFire.Router.extend({
 	routes: {
 		'bloglist':'handleBlogList',
 		'createblog':'handleCreateBlog',
+		'logout': 'handleLogOut',
 		'*splash':'handleSplashPage'
 	},
 
+	handleLogOut:function(evt){
+		fbRef.unauth()
+		this.navigate('splash',{trigger:true})
+	},
+
 	handleBlogList:function(){
-			DOM.render(<Bloglist/>, document.querySelector('.container'))
+		DOM.render(<Bloglist/>, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
