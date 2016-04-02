@@ -65,17 +65,41 @@ var SplashPage = React.createClass({
 			email:emailInput,
 			password: passWdInput
 		}
-		console.log('newUser >>>>>>>>>>>>>>>>', newUser)
+		// console.log('newUser >>>>>>>>>>>>>>>>', newUser)
 		
-		fbRef.createUser(newUser, function(err, authData){
-			console.log('err and authdata >>>>>>>>>>>>>>>>',err, authData)
-		})
 
+		console.log('new FB user  >>>>>>>>>>>>>>>>', newUser)
+		fbRef.createUser(newUser, function(err, authData){
+			console.log('err>>>>>', err)
+			console.log('authData>>>>>', authData)
+				})
+
+
+
+		rtr.navigate('#bloglist',{trigger:true})
 	},
 
 	_handleLogIn:function(event){
-		event.PreventDefault()
-		console.log(event)
+		event.preventDefault()
+		// console.log('_handleLogIn', event)
+
+		var authDataObject={
+			email:event.currentTarget.username.value,
+			password:event.currentTarget.password.value
+		}
+		console.log('authDataObject', authDataObject)
+
+
+		fbRef.authWithPassword(authDataObject, function(err, authData){
+			if (err) {
+				alert('not signed in')
+				console.log('err>>>>', err)
+			} else {
+				console.log('userAuthenticated>>>>>>', authData)
+				rtr.navigate('#bloglist',{trigger:true})
+
+			}
+		})
 	},
 
 
@@ -103,6 +127,22 @@ var SplashPage = React.createClass({
 			)
 	}
 })
+
+
+var Bloglist = React.createClass({
+	
+
+
+	render:function(){
+
+		return(
+			<div>Create Blog Here</div>
+			)
+	}
+
+	
+})
+
 
 
 var BlogRouter =  BackboneFire.Router.extend({
