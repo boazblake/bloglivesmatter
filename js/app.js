@@ -117,11 +117,11 @@ var SplashPage = React.createClass({
 		console.log('new FB user  >>>>>>>>>>>>>>>>', newUser)
 			
 		fbRef.createUser(newUser, function(err, authData){
-			console.log('err>>>>>', err)
+			console.log('err>>>>>', [err])
 			console.log('authData>>>>>', authData)
-					debugger
-				if (!authData.uid) {
-					alert('please sign in')
+					// debugger
+				if (err) {
+					alert(err.message)
 				} else {
 					rtr.navigate('#bloglist',{trigger:true})
 				}
@@ -185,6 +185,20 @@ var SplashPage = React.createClass({
 	}
 })
 var Bloglist = React.createClass({
+
+	_showBlogPost:function(evt){
+		// var chosenBlog = evt.currentTarget
+		// console.log([chosenBlog])
+		var blogHeight = document.querySelector('.blogWrapper').style.height
+
+		console.log('blogHeight>>>>>', [document.querySelector('.blogWrapper').style.height])
+		if (document.querySelector('.blogWrapper').style.height !== 'auto') {
+			document.querySelector('.blogWrapper').style.height = 'auto'
+			return
+		} else if (document.querySelector('.blogWrapper').style.height === 'auto'){
+			 document.querySelector('.blogWrapper').style.height = '150px'
+		}
+	},
 	
 	getInitialState:function(){
 		return { 
@@ -196,9 +210,9 @@ var Bloglist = React.createClass({
 	_displayBlogPosts:function(post, ind){
 		console.log('display blog posts:   ',post)
 		return (
-			<div key={ind}>
-				<span className={post.get('title')}>Title: {post.get('title')}</span><br/><br/>
-				<span className={post.get('blog')}>Blog: {post.get('blog').substr(0,20)}</span><br/><br/><br/>
+			<div key={ind} className='blogWrapper' i={ind} onClick={this._showBlogPost}>
+				<span className='title'>Title: {post.get('title')}</span><br/><br/>
+				<span className='blog'>Blog: {post.get('blog')}</span><br/><br/><br/>
 			</div>
 			)
 	},
@@ -245,6 +259,7 @@ var Createblog = React.createClass({
 			title:blogObj.title,
 			blog:blogObj.blog,
 		})
+
 		rtr.navigate('#bloglist',{trigger:true})
 	},
 

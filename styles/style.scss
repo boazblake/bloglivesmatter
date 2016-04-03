@@ -149,8 +149,18 @@ form {
     #blog{ width: 80%; height: 400px;}
 
     .signup{padding: 10px; background: #F4B350}
-    .sign{display: none;}
+    .sign{display: none; transition: all ease 1s;}
     .signin{padding: 10px; background: #65C6BB}
+}
+
+.blogWrapper {
+    height:150px;
+    background: #D35400;
+    color: #fff;
+    padding: 10px;
+    font-size: 21px;
+    margin: 10px;
+    overflow: hidden;
 }
 
 .bloglist{
@@ -164,13 +174,7 @@ form {
             margin: 30px;
         }
 
-        .usr {
-            background: #D35400;
-            color: #fff;
-            padding: 10px;
-            font-size: 21px;
-            margin: 10px;
-        }
+
 
         .usr-secret{
             color: rgba(192, 57, 43, 1.0);
