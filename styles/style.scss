@@ -128,14 +128,32 @@ body {
  * App code
  */
 
+
+body{
+
+}
+
+.header{
+    text-align: center;
+    background-image: url('http://previews.123rf.com/images/gmast3r/gmast3r1505/gmast3r150500372/40696248-Group-of-People-Hands-Crowd-Hold-Placard-Sign-Board-Blank-with-Copy-Space-Flat-Design-Vector-illustr-Stock-Vector.jpg');
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    height: 125px;
+    padding-top: 5%;
+}
+
+
+
 form {
-    textarea{ width: 100%}
+    #blog{ width: 80%; height: 400px;}
 
     .signup{padding: 10px; background: #F4B350}
+    .sign{display: none;}
     .signin{padding: 10px; background: #65C6BB}
 }
 
-#list-view{
+.bloglist{
     h1 {
         color: rgba(192, 57, 43, 1.0);
         border-bottom: 1px solid rgba(150, 40, 27, 1.0);

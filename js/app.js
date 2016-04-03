@@ -42,17 +42,16 @@ import BackboneFire from 'bbfire'
 
 var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
 var fbRef = new Firebase(rootFbURL)
-
 var BlogList = BackboneFire.Firebase.Collection.extend({
 	url: '',
 	initialize:function(){
-		this.url = rootFbURL + 'bloglist/'
+		this.url = rootFbURL + 'bloglist/' + rtr.userId + '/'
+		console.log('this.url>>>>>>>>', this.url)
 	}
 })
 
-
 var Header = React.createClass({
-	render:function(){return(<div><h3 className='signUp'>Support Blog Lives !</h3></div>)}
+	render:function(){return(<div><h3 className='header'>Blog Lives Matter !</h3></div>)}
 })
 var NavBar = React.createClass({
 
@@ -78,7 +77,17 @@ var NavBar = React.createClass({
 	}
 })
 
+
 var SplashPage = React.createClass({
+
+	_showSignIn:function(evt){
+		if (document.querySelector('.sign').style.display !== 'block') {
+			document.querySelector('.sign').style.display = 'block'
+			return
+		} else if (document.querySelector('.sign').style.display === 'block'){
+			document.querySelector('.sign').style.display = 'none'
+		}
+	},
 
 
 	_handleSignUp:function(event){
@@ -92,6 +101,10 @@ var SplashPage = React.createClass({
 		var fstName = event.currentTarget.firstName.value
 		var lstName = event.currentTarget.lastName.value
 
+		if ( (emailInput === '') || (passWdInput === '') ||  (fstName === '') ||  (lstName === '') ) {
+			return alert('please fill in all' )
+		}
+
 		console.log('inputs >>>>>>>>>', emailInput, passWdInput, fstName, lstName )
 
 		var newUser={
@@ -102,14 +115,18 @@ var SplashPage = React.createClass({
 		
 
 		console.log('new FB user  >>>>>>>>>>>>>>>>', newUser)
+			
 		fbRef.createUser(newUser, function(err, authData){
 			console.log('err>>>>>', err)
 			console.log('authData>>>>>', authData)
+					debugger
+				if (!authData.uid) {
+					alert('please sign in')
+				} else {
+					rtr.navigate('#bloglist',{trigger:true})
+				}
 				})
-
-
-
-		rtr.navigate('#bloglist',{trigger:true})
+		
 	},
 
 	_handleLogIn:function(event){
@@ -128,7 +145,11 @@ var SplashPage = React.createClass({
 				alert('not signed in')
 				console.log('err>>>>', err)
 			} else {
+				console.log('rtr>>>>>>>',rtr)
 				console.log('userAuthenticated>>>>>>', authData)
+				rtr.userId = authData.uid
+				console.log('authData.uid>>>>>>', authData.uid)
+				console.log('rtr.userId>>>>>>', rtr.userId)
 				rtr.navigate('#bloglist',{trigger:true})
 
 			}
@@ -140,58 +161,74 @@ var SplashPage = React.createClass({
 		return(
 			<div id='splashpage'>
 			<Header/>
-
 				<form onSubmit={this._handleSignUp}>
-					<input type='text' id='email' placeholder='john@email.com...'/><br/>
-					<input type='password' id='password' placeholder='password...'/><br/><br/>
-					<input type='text' id='firstName' placeholder='first name...'/><br/>
-					<input type='text' id='lastName' placeholder='last name...'/><br/>
-					<input className='button-primary' type='submit' placeholder='signup'/><br/>
+					<h3 onClick={this._showSignIn} className='signin'>Sign Up Here</h3>
+					<div className='sign'>
+						<input type='text' id='email' placeholder='john@email.com...'/><br/>
+						<input type='password' id='password' placeholder='password...'/><br/><br/>
+						<input type='text' id='firstName' placeholder='first name...'/><br/>
+						<input type='text' id='lastName' placeholder='last name...'/><br/>
+						<input className='button-primary' type='submit' placeholder='signup'/><br/>
+					</div>
 				</form>
-
 				<hr/>
-				
 				<form onSubmit={this._handleLogIn}>
 					<h3 className='signin'>Log in Here</h3><br/>
-					<input type='text' id='username' placeholder='Your Email'/><br/>
-					<input type='password' id='password' placeholder='password'/><br/>
-					<input className='button-primary' type='submit' placeholder='login'/><br/>
+					<div className='log'>
+						<input type='text' id='username' placeholder='Your Email'/><br/>
+						<input type='password' id='password' placeholder='password'/><br/>
+						<input className='button-primary' type='submit' placeholder='login'/><br/>
+					</div>
 				</form>
 			</div>
 			)
 	}
 })
-
 var Bloglist = React.createClass({
 	
 	getInitialState:function(){
+		return { 
+			blogList:this.props.bloglist
+		}
+			
+	},
+
+	_displayBlogPosts:function(post, ind){
+		console.log('display blog posts:   ',post)
 		return (
-			{ blogList:this.props.bloglist	}
+			<div key={ind}>
+				<span className={post.get('title')}>Title: {post.get('title')}</span><br/><br/>
+				<span className={post.get('blog')}>Blog: {post.get('blog').substr(0,20)}</span><br/><br/><br/>
+			</div>
 			)
 	},
 
-	// componentDidMount:function(){
-	// 	var component = this
-	// 	component.props.bloglist.on('sync', function(){
-	// 		componnent.setstate({
-	// 			bloglist:component.props.bloglist
-	// 		})
-	// 	})
-	// },
+	componentWillMount:function(){
+		var component = this
+			console.log('befoe sync ', component)
+		this.props.bloglist.on('sync', function(){
+			component.setstate({
+				blogList:component.props.blogList
+			})
+		})
+	},
 
 	render:function(){
-
+		var component = this
+		console.log(component)
 		return (
 			<div className='blogList'>
 			<Header/>
 			<NavBar/>
 			<h2> Blog List Here</h2>
+			<div>
+				{this.state.blogList.models.map(component._displayBlogPosts)}
+			</div>
 
 			</div>
 		)
 	}
 })
-
 var Createblog = React.createClass({
 	_saveblog:function(evt){
 		evt.preventDefault()
@@ -208,8 +245,7 @@ var Createblog = React.createClass({
 			title:blogObj.title,
 			blog:blogObj.blog,
 		})
-
-
+		rtr.navigate('#bloglist',{trigger:true})
 	},
 
 
@@ -227,7 +263,6 @@ var Createblog = React.createClass({
 
 			)
 	}
-
 })
 
 
@@ -245,11 +280,20 @@ var BlogRouter =  BackboneFire.Router.extend({
 	},
 
 	handleBlogList:function(){
-		DOM.render(<Bloglist/>, document.querySelector('.container'))
+		rtr = this
+		console.log(rtr.authenticatedUser)
+		if(!rtr.authenticatedUser){
+			this.navigate('splash',{trigger:true})
+			return
+		}
+
+		var bloglist = new BlogList()
+		
+		DOM.render(<Bloglist bloglist={bloglist}/>, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
-			DOM.render(<Createblog/>, document.querySelector('.container'))
+			DOM.render(<Createblog />, document.querySelector('.container'))
 	},
 
 	handleSplashPage:function(){
@@ -258,7 +302,15 @@ var BlogRouter =  BackboneFire.Router.extend({
 
 	initialize:function(){
 		var rtr = this
-		console.log('app is routing!')
+		rtr.authenticatedUser = null
+		fbRef.onAuth(function(authData){
+			if(authData){
+				rtr.authenticatedUser = authData
+			} else {
+				rtr.authenticatedUser = null
+
+			}
+		})
 		BackboneFire.history.start()
 	}
 })
