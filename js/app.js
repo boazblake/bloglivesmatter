@@ -77,24 +77,27 @@ var NavBar = React.createClass({
 	}
 })
 
-
 var SplashPage = React.createClass({
 
-	_showSignIn:function(evt){
-		if (document.querySelector('.sign').style.display !== 'block') {
-			document.querySelector('.sign').style.display = 'block'
-			return
-		} else if (document.querySelector('.sign').style.display === 'block'){
-			document.querySelector('.sign').style.display = 'none'
-		}
+	getInitialState:function(){
+		return {isExtended:false}
 	},
 
+	_authLogIn:function(authDataObject){
+		fbRef.authWithPassword(authDataObject, function(err, authData){
+			if (err) {
+				alert('not signed in')
+			} else {
+				rtr.userId = authData.uid
+				rtr.navigate('#bloglist',{trigger:true})
+
+			}
+		})
+	},
 
 	_handleSignUp:function(event){
-
-		console.log('event.currentTarget >>>>>>>>>>>>>>>>>', event.currentTarget)
-
 		event.preventDefault()
+		var component = this
 
 		var emailInput = event.currentTarget.email.value
 		var passWdInput = event.currentTarget.password.value
@@ -111,27 +114,27 @@ var SplashPage = React.createClass({
 			email:emailInput,
 			password: passWdInput
 		}
+
 		// console.log('newUser >>>>>>>>>>>>>>>>', newUser)
 		
 
 		console.log('new FB user  >>>>>>>>>>>>>>>>', newUser)
 			
+		
 		fbRef.createUser(newUser, function(err, authData){
 			console.log('err>>>>>', [err])
 			console.log('authData>>>>>', authData)
-					// debugger
+			
 				if (err) {
 					alert(err.message)
 				} else {
-					rtr.navigate('#bloglist',{trigger:true})
+					component._authLogIn(newUser)
 				}
-				})
-		
+			})
 	},
 
 	_handleLogIn:function(event){
 		event.preventDefault()
-		// console.log('_handleLogIn', event)
 
 		var authDataObject={
 			email:event.currentTarget.username.value,
@@ -139,31 +142,23 @@ var SplashPage = React.createClass({
 		}
 		console.log('authDataObject', authDataObject)
 
-
-		fbRef.authWithPassword(authDataObject, function(err, authData){
-			if (err) {
-				alert('not signed in')
-				console.log('err>>>>', err)
-			} else {
-				console.log('rtr>>>>>>>',rtr)
-				console.log('userAuthenticated>>>>>>', authData)
-				rtr.userId = authData.uid
-				console.log('authData.uid>>>>>>', authData.uid)
-				console.log('rtr.userId>>>>>>', rtr.userId)
-				rtr.navigate('#bloglist',{trigger:true})
-
-			}
-		})
+		this._authLogIn(authDataObject)
 	},
 
+	_showSignIn:function(evt){
+		if (this.state.isExtended) this.setState({ isExtended:false})
+		else this.setState({ isExtended:true })
+	},
 
 	render:function(){
+		var elClassName = 'sign'
+		if (this.state.isExtended) {elClassName = 'sign extended'}
 		return(
 			<div id='splashpage'>
 			<Header/>
 				<form onSubmit={this._handleSignUp}>
 					<h3 onClick={this._showSignIn} className='signin'>Sign Up Here</h3>
-					<div className='sign'>
+					<div className={elClassName}>
 						<input type='text' id='email' placeholder='john@email.com...'/><br/>
 						<input type='password' id='password' placeholder='password...'/><br/><br/>
 						<input type='text' id='firstName' placeholder='first name...'/><br/>
@@ -181,55 +176,37 @@ var SplashPage = React.createClass({
 					</div>
 				</form>
 			</div>
-			)
+		)
 	}
 })
+
 var Bloglist = React.createClass({
 
-	_showBlogPost:function(evt){
-		// var chosenBlog = evt.currentTarget
-		// console.log([chosenBlog])
-		var blogHeight = document.querySelector('.blogWrapper').style.height
-
-		console.log('blogHeight>>>>>', [document.querySelector('.blogWrapper').style.height])
-		if (document.querySelector('.blogWrapper').style.height !== 'auto') {
-			document.querySelector('.blogWrapper').style.height = 'auto'
-			return
-		} else if (document.querySelector('.blogWrapper').style.height === 'auto'){
-			 document.querySelector('.blogWrapper').style.height = '150px'
-		}
-	},
-	
 	getInitialState:function(){
 		return { 
-			blogList:this.props.bloglist
+			blogList:this.props.bloglistColl
 		}
 			
 	},
 
 	_displayBlogPosts:function(post, ind){
-		console.log('display blog posts:   ',post)
 		return (
-			<div key={ind} className='blogWrapper' i={ind} onClick={this._showBlogPost}>
-				<span className='title'>Title: {post.get('title')}</span><br/><br/>
-				<span className='blog'>Blog: {post.get('blog')}</span><br/><br/><br/>
-			</div>
-			)
+			<SinglePost key={ind} post={post}/>
+		)
 	},
 
 	componentWillMount:function(){
 		var component = this
-			console.log('befoe sync ', component)
-		this.props.bloglist.on('sync', function(){
-			component.setstate({
-				blogList:component.props.blogList
+
+		this.props.bloglistColl.on('sync', function(){
+			component.setState({
+				blogList:component.props.bloglistColl
 			})
 		})
 	},
 
 	render:function(){
 		var component = this
-		console.log(component)
 		return (
 			<div className='blogList'>
 			<Header/>
@@ -243,11 +220,37 @@ var Bloglist = React.createClass({
 		)
 	}
 })
+
+var SinglePost = React.createClass({
+	
+	getInitialState:function(){
+		return { isExtended:false }
+	},
+		
+
+	_showBlogPost:function(evt){
+		if (this.state.isExtended) this.setState({ isExtended:false})
+		else  this.setState({ isExtended:true}) 
+
+	},
+
+
+	render: function(){
+		console.log('is extended?? >>>>>>>>>>>', this.state.isExtended)
+		var elClassName = 'blogWrapper'
+		if (this.state.isExtended) { elClassName='blogWrapper extended'}
+		return (
+			<div className={elClassName} onClick={this._showBlogPost} data-postid={this.props.post.get('id')}>
+				<span className='title'>Title: {this.props.post.get('title')}</span><br/><br/>
+				<span className='blog'>Blog: {this.props.post.get('blog')}</span><br/><br/><br/>
+			</div>
+			)
+	}
+})
+
 var Createblog = React.createClass({
 	_saveblog:function(evt){
 		evt.preventDefault()
-		// console.log('evt.currentTarget.title.value >>>>>', evt.currentTarget.title.value)
-		// console.log('evt.currentTarget.blog.value >>>>>>', evt.currentTarget.blog.value)
  
 		var blogObj = {
 			title:evt.currentTarget.title.value,
@@ -255,6 +258,7 @@ var Createblog = React.createClass({
 		}
 
 		var blogListColl = new BlogList()
+
 		blogListColl.create({
 			title:blogObj.title,
 			blog:blogObj.blog,
@@ -271,15 +275,13 @@ var Createblog = React.createClass({
 				<NavBar/>
 				<form onSubmit={this._saveblog}>
 					<input type='text' id='title' placeholder='Title...'/><br/>
-					<input type='textarea' id='blog' placeholder='blog away...'/><br/><br/>
+					<textarea  id='blog' placeholder='blog away...'/><br/><br/>
 					<input className='button-primary' type='submit'/>
 				</form>
 			</div>
-
-			)
+		)
 	}
 })
-
 
 var BlogRouter =  BackboneFire.Router.extend({
 	routes: {
@@ -302,12 +304,21 @@ var BlogRouter =  BackboneFire.Router.extend({
 			return
 		}
 
-		var bloglist = new BlogList()
+		var bloglistColl = new BlogList()
 		
-		DOM.render(<Bloglist bloglist={bloglist}/>, document.querySelector('.container'))
+		DOM.render(<Bloglist bloglistColl={bloglistColl}/>, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
+		rtr = this
+		console.log(rtr.authenticatedUser)
+		if(!rtr.authenticatedUser){
+			this.navigate('splash',{trigger:true})
+			return
+		}
+
+		var bloglistColl = new BlogList()
+
 			DOM.render(<Createblog />, document.querySelector('.container'))
 	},
 

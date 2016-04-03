@@ -143,24 +143,34 @@ body{
     padding-top: 5%;
 }
 
-
-
 form {
     #blog{ width: 80%; height: 400px;}
 
     .signup{padding: 10px; background: #F4B350}
-    .sign{display: none; transition: all ease 1s;}
+
     .signin{padding: 10px; background: #65C6BB}
+
+    .sign{
+        display: none;
+        &.extended{
+            display: block;
+            transition: all 2s ease;
+        }
+    }
 }
 
 .blogWrapper {
-    height:150px;
+    max-height:150px;
     background: #D35400;
     color: #fff;
     padding: 10px;
     font-size: 21px;
     margin: 10px;
     overflow: hidden;
+
+    &.extended{
+        max-height: 10000px;
+    }
 }
 
 .bloglist{
