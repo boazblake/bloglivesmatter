@@ -58,7 +58,7 @@ var BlogList = BackboneFire.Firebase.Collection.extend({
 var PublicBlog = BackboneFire.Firebase.Collection.extend({
 	url: '',
 	initialize:function(){
-		this.url = rootFbURL + 'public/'
+		this.url = rootFbURL + '/' 
 	}
 })
 
@@ -78,7 +78,7 @@ var NavBar = React.createClass({
 
 	_genButtons:function(butType, ind){
 		return (
-			<button onClick={this._ButtonAction} value={butType} key={ind}>{butType}</button>
+			<button className="button-primary" onClick={this._ButtonAction} value={butType} key={ind}>{butType}</button>
 		)
 	},
 
@@ -176,10 +176,10 @@ var SplashPage = React.createClass({
 				<form onSubmit={this._handleSignUp}>
 					<h3 onClick={this._showSignIn} className='signin'>Sign Up Here</h3>
 					<div className={elClassName}>
-						<input type='text' id='email' placeholder='john@email.com...'/><br/>
+						<input type='text' className="u-half-width" id='email' placeholder='john@email.com...'/><br/>
 						<input type='password' id='password' placeholder='password...'/><br/><br/>
-						<input type='text' id='firstName' placeholder='first name...'/><br/>
-						<input type='text' id='lastName' placeholder='last name...'/><br/>
+						<input type='text' className="u-half-width" id='firstName' placeholder='first name...'/><br/>
+						<input type='text' className="u-half-width" id='lastName' placeholder='last name...'/><br/>
 						<input className='button-primary' type='submit' placeholder='signup'/><br/>
 					</div>
 				</form>
@@ -187,7 +187,7 @@ var SplashPage = React.createClass({
 				<form onSubmit={this._handleLogIn}>
 					<h3 className='signin'>Log in Here</h3><br/>
 					<div className='log'>
-						<input type='text' id='username' placeholder='Your Email'/><br/>
+						<input type='text' className="u-half-width" id='username' placeholder='Your Email'/><br/>
 						<input type='password' id='password' placeholder='password'/><br/>
 						<input className='button-primary' type='submit' placeholder='login'/><br/>
 					</div>
@@ -284,14 +284,8 @@ var Createblog = React.createClass({
 		}
 
 		var blogListColl = new BlogList()
-		var publicListColl = new PublicBlog()
 
 		blogListColl.create({
-			title:blogObj.title,
-			blog:blogObj.blog,
-		})
-
-		publicListColl.create({
 			title:blogObj.title,
 			blog:blogObj.blog,
 		})
@@ -328,7 +322,9 @@ var PublicBlog = React.createClass({
 	},
 
 	render:function(){
+		var component = this
 
+		console.log(component.props.publicListColl)
 		return (
 			<div>
 			<Header/>
