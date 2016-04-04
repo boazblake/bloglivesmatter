@@ -40,8 +40,13 @@ import _ from 'underscore'
 import Firebase from 'firebase'
 import BackboneFire from 'bbfire'
 
+
+//base variables
 var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
+
 var fbRef = new Firebase(rootFbURL)
+
+// Firebase Collections
 var BlogList = BackboneFire.Firebase.Collection.extend({
 	url: '',
 	initialize:function(){
@@ -50,9 +55,19 @@ var BlogList = BackboneFire.Firebase.Collection.extend({
 	}
 })
 
+var PublicBlog = BackboneFire.Firebase.Collection.extend({
+	url: '',
+	initialize:function(){
+		this.url = rootFbURL + 'public/'
+	}
+})
+
+
+//Modules
 var Header = React.createClass({
 	render:function(){return(<div><h3 className='header'>Blog Lives Matter !</h3></div>)}
 })
+
 var NavBar = React.createClass({
 
 	_ButtonAction:function(evt){
@@ -71,12 +86,14 @@ var NavBar = React.createClass({
 		var component = this
 		return (
 		<div>
-			{['logout','createblog', 'bloglist'].map(component._genButtons)}
+			{['logout','createblog', 'bloglist', 'publicblog'].map(component._genButtons)}
 		</div>
 		)
 	}
 })
 
+
+//Views
 var SplashPage = React.createClass({
 
 	getInitialState:function(){
@@ -184,7 +201,7 @@ var Bloglist = React.createClass({
 
 	getInitialState:function(){
 		return { 
-			blogList:this.props.bloglistColl
+			blogList:this.props.blogListColl
 		}
 			
 	},
@@ -198,9 +215,9 @@ var Bloglist = React.createClass({
 	componentWillMount:function(){
 		var component = this
 
-		this.props.bloglistColl.on('sync', function(){
+		this.props.blogListColl.on('sync', function(){
 			component.setState({
-				blogList:component.props.bloglistColl
+				blogList:component.props.blogListColl
 			})
 		})
 	},
@@ -211,11 +228,10 @@ var Bloglist = React.createClass({
 			<div className='blogList'>
 			<Header/>
 			<NavBar/>
-			<h2> Blog List Here</h2>
+			<h2> Previous Blogs</h2>
 			<div>
 				{this.state.blogList.models.map(component._displayBlogPosts)}
 			</div>
-
 			</div>
 		)
 	}
@@ -236,12 +252,22 @@ var SinglePost = React.createClass({
 
 
 	render: function(){
+	
+		var wholeDate = new Date()
+		var month = wholeDate.getMonth() + 1
+		var day = wholeDate.getDate()
+		var year = wholeDate.getFullYear()
+		var newDate = day+'/'+month+'/'+year
+		console.log('newDate>>>>>>',newDate)
 		console.log('is extended?? >>>>>>>>>>>', this.state.isExtended)
+		
 		var elClassName = 'blogWrapper'
 		if (this.state.isExtended) { elClassName='blogWrapper extended'}
+		
 		return (
 			<div className={elClassName} onClick={this._showBlogPost} data-postid={this.props.post.get('id')}>
-				<span className='title'>Title: {this.props.post.get('title')}</span><br/><br/>
+				<span className='title'>Title: {this.props.post.get('title')}</span>
+				<span className='date'>Date: {newDate}</span><br/><br/>
 				<span className='blog'>Blog: {this.props.post.get('blog')}</span><br/><br/><br/>
 			</div>
 			)
@@ -258,8 +284,14 @@ var Createblog = React.createClass({
 		}
 
 		var blogListColl = new BlogList()
+		var publicListColl = new PublicBlog()
 
 		blogListColl.create({
+			title:blogObj.title,
+			blog:blogObj.blog,
+		})
+
+		publicListColl.create({
 			title:blogObj.title,
 			blog:blogObj.blog,
 		})
@@ -283,12 +315,45 @@ var Createblog = React.createClass({
 	}
 })
 
+var PublicBlog = React.createClass({
+
+	componenetWillMount:function(){
+		var component = this
+
+		this.props.publicListColl.on('sync', function(){
+			component.setState({
+				publicListColl:component.props.publicListColl
+			})
+		})
+	},
+
+	render:function(){
+
+		return (
+			<div>
+			<Header/>
+			<NavBar/>
+				<h3>Coming Soon</h3>
+			</div>
+		)
+
+	}
+})
+//Router
 var BlogRouter =  BackboneFire.Router.extend({
 	routes: {
 		'bloglist':'handleBlogList',
 		'createblog':'handleCreateBlog',
 		'logout': 'handleLogOut',
+		'publicblog':'handlePublicBlog',
 		'*splash':'handleSplashPage'
+	},
+
+	handlePublicBlog:function(){
+		var publiclistColl = new PublicBlog()
+		console.log('publiclistColl>>>>>', publiclistColl)
+
+		DOM.render(<PublicBlog publiclistColl={publiclistColl} />, document.querySelector('.container'))
 	},
 
 	handleLogOut:function(evt){
@@ -304,9 +369,10 @@ var BlogRouter =  BackboneFire.Router.extend({
 			return
 		}
 
-		var bloglistColl = new BlogList()
+		var blogListColl = new BlogList()
+		var publiclistColl = new PublicBlog()
 		
-		DOM.render(<Bloglist bloglistColl={bloglistColl}/>, document.querySelector('.container'))
+		DOM.render(<Bloglist blogListColl={blogListColl} />, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
@@ -317,7 +383,8 @@ var BlogRouter =  BackboneFire.Router.extend({
 			return
 		}
 
-		var bloglistColl = new BlogList()
+		var blogListColl = new BlogList()
+		var publiclistColl = new PublicBlog()
 
 			DOM.render(<Createblog />, document.querySelector('.container'))
 	},
