@@ -47,18 +47,18 @@ var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
 var fbRef = new Firebase(rootFbURL)
 
 // Firebase Collections
-var BlogList = BackboneFire.Firebase.Collection.extend({
+var BlogListCollection = BackboneFire.Firebase.Collection.extend({
 	url: '',
 	initialize:function(){
-		this.url = rootFbURL + 'bloglist/' + rtr.userId + '/'
+		this.url = rootFbURL + 'users/' + rtr.userId + '/posts/'
 		console.log('this.url>>>>>>>>', this.url)
 	}
 })
 
-var PublicBlog = BackboneFire.Firebase.Collection.extend({
+var PublicBlogCollection = BackboneFire.Firebase.Collection.extend({
 	url: '',
 	initialize:function(){
-		this.url = rootFbURL + '/' 
+		this.url = rootFbURL + 'users/allPosts'
 	}
 })
 
@@ -107,7 +107,6 @@ var SplashPage = React.createClass({
 			} else {
 				rtr.userId = authData.uid
 				rtr.navigate('#bloglist',{trigger:true})
-
 			}
 		})
 	},
@@ -169,6 +168,7 @@ var SplashPage = React.createClass({
 
 	render:function(){
 		var elClassName = 'sign'
+
 		if (this.state.isExtended) {elClassName = 'sign extended'}
 		return(
 			<div id='splashpage'>
@@ -201,7 +201,7 @@ var Bloglist = React.createClass({
 
 	getInitialState:function(){
 		return { 
-			blogList:this.props.blogListColl
+			blogList:this.props.blogListColl,
 		}
 			
 	},
@@ -226,12 +226,12 @@ var Bloglist = React.createClass({
 		var component = this
 		return (
 			<div className='blogList'>
-			<Header/>
-			<NavBar/>
-			<h2> Previous Blogs</h2>
-			<div>
-				{this.state.blogList.models.map(component._displayBlogPosts)}
-			</div>
+				<Header/>
+				<NavBar/>
+				<h2>Previous Blogs</h2>
+				<div>
+					{this.state.blogList.models.map(component._displayBlogPosts)}
+				</div>
 			</div>
 		)
 	}
@@ -283,12 +283,20 @@ var Createblog = React.createClass({
 			blog: evt.currentTarget.blog.value
 		}
 
-		var blogListColl = new BlogList()
+		var blogListColl = new BlogListCollection()
 
 		blogListColl.create({
 			title:blogObj.title,
 			blog:blogObj.blog,
 		})
+
+		var publicListColl = new PublicBlogCollection()
+
+		publicListColl.create({
+			title:blogObj.title,
+			blog:blogObj.blog,
+		})
+
 
 		rtr.navigate('#bloglist',{trigger:true})
 	},
@@ -311,6 +319,20 @@ var Createblog = React.createClass({
 
 var PublicBlog = React.createClass({
 
+	getInitialState:function(){
+		console.log('component in getinitialstate', this)
+		return {
+			publicList: this.props.publicListColl,
+		}
+	},
+
+	_displayAllPosts:function(post, ind){
+		console.log('post>>>>>>>',post)
+		return (
+			<SinglePost key={ind} post={post}/>
+		)
+	},
+
 	componenetWillMount:function(){
 		var component = this
 
@@ -324,17 +346,21 @@ var PublicBlog = React.createClass({
 	render:function(){
 		var component = this
 
+		console.log(component.state.models)
 		console.log(component.props.publicListColl)
 		return (
 			<div>
 			<Header/>
 			<NavBar/>
-				<h3>Coming Soon</h3>
+				<div>
+					{component.props.publicListColl.models.map(component._displayAllPosts)}
+				</div>
 			</div>
 		)
 
 	}
 })
+
 //Router
 var BlogRouter =  BackboneFire.Router.extend({
 	routes: {
@@ -346,10 +372,10 @@ var BlogRouter =  BackboneFire.Router.extend({
 	},
 
 	handlePublicBlog:function(){
-		var publiclistColl = new PublicBlog()
-		console.log('publiclistColl>>>>>', publiclistColl)
+		var publicListColl = new PublicBlogCollection()
+		console.log('publicListColl>>>>>', publicListColl)
 
-		DOM.render(<PublicBlog publiclistColl={publiclistColl} />, document.querySelector('.container'))
+		DOM.render(<PublicBlog publicListColl={publicListColl} />, document.querySelector('.container'))
 	},
 
 	handleLogOut:function(evt){
@@ -358,31 +384,22 @@ var BlogRouter =  BackboneFire.Router.extend({
 	},
 
 	handleBlogList:function(){
+		console.log('handling blog list')
 		rtr = this
-		console.log(rtr.authenticatedUser)
-		if(!rtr.authenticatedUser){
-			this.navigate('splash',{trigger:true})
-			return
-		}
 
-		var blogListColl = new BlogList()
-		var publiclistColl = new PublicBlog()
+		var blogListColl = new BlogListCollection()
+		var publicListColl = new PublicBlogCollection()
 		
-		DOM.render(<Bloglist blogListColl={blogListColl} />, document.querySelector('.container'))
+		DOM.render(<Bloglist blogListColl={blogListColl} publicListColl={publicListColl}/>, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
 		rtr = this
-		console.log(rtr.authenticatedUser)
-		if(!rtr.authenticatedUser){
-			this.navigate('splash',{trigger:true})
-			return
-		}
 
-		var blogListColl = new BlogList()
-		var publiclistColl = new PublicBlog()
+		var blogListColl = new BlogListCollection()
+		var publicListColl = new PublicBlogCollection()
 
-			DOM.render(<Createblog />, document.querySelector('.container'))
+		DOM.render(<Createblog />, document.querySelector('.container'))
 	},
 
 	handleSplashPage:function(){
@@ -391,14 +408,24 @@ var BlogRouter =  BackboneFire.Router.extend({
 
 	initialize:function(){
 		var rtr = this
-		rtr.authenticatedUser = null
+		console.log('initializing')
+		rtr.authenticatedUser = fbRef.getAuth()
+
+		if (!rtr.authenticatedUser) location.hash = "splash"
+
 		fbRef.onAuth(function(authData){
 			if(authData){
 				rtr.authenticatedUser = authData
 			} else {
 				rtr.authenticatedUser = null
-
 			}
+		})
+
+
+		rtr.on('all', function() {
+			if(!rtr.authenticatedUser){
+				location.hash = "splash"
+			}	
 		})
 		BackboneFire.history.start()
 	}
