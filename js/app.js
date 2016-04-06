@@ -40,17 +40,67 @@ import _ from 'underscore'
 import Firebase from 'firebase'
 import BackboneFire from 'bbfire'
 
+//Put on window 'for testing in chrome dev tools'
+window.jq = $
+
+window.BBFIRE = BackboneFire
+window.FB = Firebase
 
 //base variables
 var rootFbURL = 'https://bloglivesmatter.firebaseio.com/'
 
+//creating a reference point to firebase DB 
 var fbRef = new Firebase(rootFbURL)
+window.fbRef = fbRef
+//OBESOLTE>>>>>>>>>>
+//  fbRef.onAuth (function(){
+//        var userPostColl = new PostsByUserCollection( authData.uid );
+//         userPostColl.fetch()
+//         userPostColl.on("sync", function(){
+//           console.log("all the users secrets: ", userSecretColl.models[0])
+//           rtr.authenticatedUserPosts = userSecretColl.models[0]
+//           window.location.hash= ''
+//         })
+// })
+//<<<<<<<<<<<<<<<<<
+
+let _autherizeLogin = {
+	_authLogIn:function(authDataObject){
+		fbRef.authWithPassword(authDataObject, function(err, authData){
+			console.log('err:', err)
+			console.log('authData:', authData)
+			if (err) {
+				alert('not signed in')
+			} else {
+				rtr.navigate('#bloglist', {trigger:true} )
+			}
+		})
+	},
+}
 
 // Firebase Collections
+
+
+var UserModel = BackboneFire.Firebase.Model.extend({
+	url: function() {
+		return `${rootFbURL}/users/${this.id}`
+	},
+
+	initialize:function(uid){
+		this.id = uid
+	}
+})
+
+
+// fbRef.child('users').child(authData.uid).on('value',function(data){console.log(data.val())})
+// THIS (vanilla firebase sdk) IS THE MOST BASIC WAY OF RETRIEVING DATA FROM THE FIREBASE DATABASE.
+
+// THE SURROUNDING BACKFIRE MODELS AND COLLECTIONS ARE THE BACKBONE-INTEGRATED METHODS OF RECEIVING THAT DATA.
+
 var BlogListCollection = BackboneFire.Firebase.Collection.extend({
 	url: '',
-	initialize:function(){
-		this.url = rootFbURL + 'users/' + rtr.userId + '/posts/'
+	initialize:function(uid){
+		this.url = rootFbURL + 'users/' + uid + '/posts/'
 		console.log('this.url>>>>>>>>', this.url)
 	}
 })
@@ -62,10 +112,23 @@ var PublicBlogCollection = BackboneFire.Firebase.Collection.extend({
 	}
 })
 
+var PostsByUserCollection = BackboneFire.Firebase.Collection.extend({
+  autoSync: false,
+  
+  url: '',
 
-//Modules
+  initialize: function(uid){
+    //pass a uid to query
+    var ref = new Firebase("https://bloglivesmatter.firebaseio.com/")
+    if (uid) { ref = ref.orderByChild('uid').equalTo(uid) }
+    this.url = ref
+  }
+})
+
+
+//Modules & Top Level Functions
 var Header = React.createClass({
-	render:function(){return(<div><h3 className='header'>Blog Lives Matter !</h3></div>)}
+	render:function(){return(<div><h3 className='header'>All Blogs Matter !</h3></div>)}
 })
 
 var NavBar = React.createClass({
@@ -92,29 +155,12 @@ var NavBar = React.createClass({
 	}
 })
 
-
 //Views
 var SplashPage = React.createClass({
-
-	getInitialState:function(){
-		return {isExtended:false}
-	},
-
-	_authLogIn:function(authDataObject){
-		fbRef.authWithPassword(authDataObject, function(err, authData){
-			if (err) {
-				alert('not signed in')
-			} else {
-				rtr.userId = authData.uid
-				rtr.navigate('#bloglist',{trigger:true})
-			}
-		})
-	},
 
 	_handleSignUp:function(event){
 		event.preventDefault()
 		var component = this
-
 		var emailInput = event.currentTarget.email.value
 		var passWdInput = event.currentTarget.password.value
 		var fstName = event.currentTarget.firstName.value
@@ -131,22 +177,22 @@ var SplashPage = React.createClass({
 			password: passWdInput
 		}
 
-		// console.log('newUser >>>>>>>>>>>>>>>>', newUser)
-		
-
-		console.log('new FB user  >>>>>>>>>>>>>>>>', newUser)
-			
 		
 		fbRef.createUser(newUser, function(err, authData){
 			console.log('err>>>>>', [err])
 			console.log('authData>>>>>', authData)
 			
-				if (err) {
-					alert(err.message)
-				} else {
-					component._authLogIn(newUser)
-				}
-			})
+			if (err) {
+				alert(err.message)
+			} 
+			else {
+				fbRef.child('users').child(authData.uid).set(
+					{firstName:fstName, lastName:lstName, email:emailInput, posts: "" }
+				)
+				console.log('fbRef', fbRef)
+				_autherizeLogin._authLogIn(newUser)				
+			}
+		})
 	},
 
 	_handleLogIn:function(event){
@@ -156,14 +202,17 @@ var SplashPage = React.createClass({
 			email:event.currentTarget.username.value,
 			password:event.currentTarget.password.value
 		}
-		console.log('authDataObject', authDataObject)
 
-		this._authLogIn(authDataObject)
+		_autherizeLogin._authLogIn(authDataObject)
 	},
 
 	_showSignIn:function(evt){
 		if (this.state.isExtended) this.setState({ isExtended:false})
 		else this.setState({ isExtended:true })
+	},
+
+	getInitialState:function(){
+		return {isExtended:false}
 	},
 
 	render:function(){
@@ -202,13 +251,13 @@ var Bloglist = React.createClass({
 	getInitialState:function(){
 		return { 
 			blogList:this.props.blogListColl,
-		}
-			
+		}		
 	},
 
 	_displayBlogPosts:function(post, ind){
+		if (!post.get('title')) return ''
 		return (
-			<SinglePost key={ind} post={post}/>
+			<SinglePost key={ind} post={post} userModel={this.props.userModel} />
 		)
 	},
 
@@ -228,7 +277,7 @@ var Bloglist = React.createClass({
 			<div className='blogList'>
 				<Header/>
 				<NavBar/>
-				<h2>Previous Blogs</h2>
+				<h2>Personal Blogs</h2>
 				<div>
 					{this.state.blogList.models.map(component._displayBlogPosts)}
 				</div>
@@ -250,24 +299,31 @@ var SinglePost = React.createClass({
 
 	},
 
-
 	render: function(){
-	
+
 		var wholeDate = new Date()
 		var month = wholeDate.getMonth() + 1
 		var day = wholeDate.getDate()
 		var year = wholeDate.getFullYear()
 		var newDate = day+'/'+month+'/'+year
-		console.log('newDate>>>>>>',newDate)
-		console.log('is extended?? >>>>>>>>>>>', this.state.isExtended)
 		
 		var elClassName = 'blogWrapper'
 		if (this.state.isExtended) { elClassName='blogWrapper extended'}
-		
+ 		// {this.props.userName.get('firstName')}
+
+ 		var firstName
+ 		if ( this.props.userModel) {
+ 			firstName = this.props.userModel.get('firstName')
+ 		} else {
+ 			console.log(this.props.post)
+ 			firstName = this.props.post.get('firstName')
+ 		}
+
 		return (
 			<div className={elClassName} onClick={this._showBlogPost} data-postid={this.props.post.get('id')}>
-				<span className='title'>Title: {this.props.post.get('title')}</span>
-				<span className='date'>Date: {newDate}</span><br/><br/>
+				<span className='title'>Name:{firstName}</span><br/>
+				<span className='title'>Title: {this.props.post.get('title')}</span><br/>
+				<span className='date'>Date: {newDate}</span><br/>
 				<span className='blog'>Blog: {this.props.post.get('blog')}</span><br/><br/><br/>
 			</div>
 			)
@@ -280,27 +336,30 @@ var Createblog = React.createClass({
  
 		var blogObj = {
 			title:evt.currentTarget.title.value,
-			blog: evt.currentTarget.blog.value
+			blog: evt.currentTarget.blog.value,
 		}
 
-		var blogListColl = new BlogListCollection()
+
+		var blogListColl = new BlogListCollection(fbRef.getAuth().uid)
 
 		blogListColl.create({
-			title:blogObj.title,
-			blog:blogObj.blog,
+			title: blogObj.title,
+			blog:  blogObj.blog,
 		})
 
 		var publicListColl = new PublicBlogCollection()
 
 		publicListColl.create({
-			title:blogObj.title,
-			blog:blogObj.blog,
+			title: blogObj.title,
+			blog:  blogObj.blog,
+			firstName: this.props.userModel.get('firstName'),
+			lastName: this.props.userModel.get('lastName')
+
 		})
 
 
 		rtr.navigate('#bloglist',{trigger:true})
 	},
-
 
 	render:function(){
 		return(
@@ -327,9 +386,9 @@ var PublicBlog = React.createClass({
 	},
 
 	_displayAllPosts:function(post, ind){
-		console.log('post>>>>>>>',post)
+		if (!post.get('title')) return ''
 		return (
-			<SinglePost key={ind} post={post}/>
+			<SinglePost key={ind} post={post} userModel={false}/>
 		)
 	},
 
@@ -373,9 +432,9 @@ var BlogRouter =  BackboneFire.Router.extend({
 
 	handlePublicBlog:function(){
 		var publicListColl = new PublicBlogCollection()
-		console.log('publicListColl>>>>>', publicListColl)
+		var queriedUserMdl = new UserModel(fbRef.getAuth().uid)
 
-		DOM.render(<PublicBlog publicListColl={publicListColl} />, document.querySelector('.container'))
+		DOM.render(<PublicBlog userModel={queriedUserMdl} publicListColl={publicListColl} />, document.querySelector('.container'))
 	},
 
 	handleLogOut:function(evt){
@@ -386,20 +445,21 @@ var BlogRouter =  BackboneFire.Router.extend({
 	handleBlogList:function(){
 		console.log('handling blog list')
 		rtr = this
-
-		var blogListColl = new BlogListCollection()
+		fbRef.authData = fbRef.getAuth()
+		// UM = UserModel
+		var queriedUserMdl = new UserModel(fbRef.getAuth().uid)
+		var blogListColl = new BlogListCollection(fbRef.getAuth().uid)
 		var publicListColl = new PublicBlogCollection()
 		
-		DOM.render(<Bloglist blogListColl={blogListColl} publicListColl={publicListColl}/>, document.querySelector('.container'))
+		DOM.render(<Bloglist blogListColl={blogListColl} userModel={queriedUserMdl} publicListColl={publicListColl}/>, document.querySelector('.container'))
 	},
 
 	handleCreateBlog:function(){
 		rtr = this
+		var queriedUserMdl = new UserModel(fbRef.getAuth().uid)
+		console.log('userName>>>>>>>', queriedUserMdl)
 
-		var blogListColl = new BlogListCollection()
-		var publicListColl = new PublicBlogCollection()
-
-		DOM.render(<Createblog />, document.querySelector('.container'))
+		DOM.render(<Createblog userModel={queriedUserMdl} />, document.querySelector('.container'))
 	},
 
 	handleSplashPage:function(){
@@ -413,17 +473,20 @@ var BlogRouter =  BackboneFire.Router.extend({
 
 		if (!rtr.authenticatedUser) location.hash = "splash"
 
-		fbRef.onAuth(function(authData){
-			if(authData){
-				rtr.authenticatedUser = authData
-			} else {
-				rtr.authenticatedUser = null
-			}
-		})
+		// fbRef.onAuth(function(authData){
+		// 	console.log('new auth status! >>>>>', authData)
+
+		// 	if(authData){
+		// 		rtr.userId = authData.uid
+		// 		rtr.authenticatedUser = authData
+		// 	} else {
+		// 		rtr.authenticatedUser = null
+		// 	}
+		// })
 
 
 		rtr.on('all', function() {
-			if(!rtr.authenticatedUser){
+			if(!fbRef.getAuth()){
 				location.hash = "splash"
 			}	
 		})
